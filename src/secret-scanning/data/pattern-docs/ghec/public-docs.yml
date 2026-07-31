@@ -215,7 +215,7 @@
   secretType: apiclub_api_key
   isPublic: false
   isPrivateWithGhas: true
-  hasPushProtection: false
+  hasPushProtection: true
   hasValidityCheck: false
   hasExtendedMetadata: false
   base64Supported: false
@@ -1477,7 +1477,7 @@
   isPrivateWithGhas: true
   hasPushProtection: true
   hasValidityCheck: true
-  hasExtendedMetadata: false
+  hasExtendedMetadata: '{% ifversion ghes %}false{% else %}true{% endif %}'
   base64Supported: false
   isduplicate: false
 - provider: Contentful
@@ -2367,7 +2367,7 @@
   isPrivateWithGhas: true
   hasPushProtection: false
   hasValidityCheck: true
-  hasExtendedMetadata: false
+  hasExtendedMetadata: '{% ifversion ghes %}false{% else %}true{% endif %}'
   base64Supported: false
   isduplicate: false
 - provider: GoCardless
@@ -2377,7 +2377,7 @@
   isPrivateWithGhas: true
   hasPushProtection: false
   hasValidityCheck: true
-  hasExtendedMetadata: false
+  hasExtendedMetadata: '{% ifversion ghes %}false{% else %}true{% endif %}'
   base64Supported: false
   isduplicate: false
 - provider: Google
@@ -3074,6 +3074,16 @@
   hasExtendedMetadata: false
   base64Supported: false
   isduplicate: false
+- provider: Lovable Labs
+  supportedSecret: Lovable API Key
+  secretType: lovable_api_key
+  isPublic: true
+  isPrivateWithGhas: false
+  hasPushProtection: false
+  hasValidityCheck: false
+  hasExtendedMetadata: false
+  base64Supported: false
+  isduplicate: false
 - provider: Mailchimp
   supportedSecret: Mailchimp API Key
   secretType: mailchimp_api_key
@@ -3249,7 +3259,7 @@
   secretType: mistral_ai_api_key
   isPublic: false
   isPrivateWithGhas: true
-  hasPushProtection: false
+  hasPushProtection: true
   hasValidityCheck: true
   hasExtendedMetadata: false
   base64Supported: false
@@ -3929,7 +3939,7 @@
   secretType: posthog_oauth_access_token
   isPublic: true
   isPrivateWithGhas: true
-  hasPushProtection: false
+  hasPushProtection: true
   hasValidityCheck: false
   hasExtendedMetadata: false
   base64Supported: false
@@ -4159,7 +4169,7 @@
   secretType: resend_api_key
   isPublic: true
   isPrivateWithGhas: true
-  hasPushProtection: false
+  hasPushProtection: true
   hasValidityCheck: false
   hasExtendedMetadata: false
   base64Supported: false
@@ -4601,7 +4611,7 @@
   isPrivateWithGhas: true
   hasPushProtection: true
   hasValidityCheck: true
-  hasExtendedMetadata: false
+  hasExtendedMetadata: '{% ifversion ghes %}false{% else %}true{% endif %}'
   base64Supported: false
   isduplicate: true
 - provider: Square
