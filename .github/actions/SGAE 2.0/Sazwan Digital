@@ -1,0 +1,118 @@
+Added company profiles and suggested branding URLs again.
+
+Included:
+
+- Muhamad Sazwan Bin Ismail Enterprise
+- END AI GLOBAL
+- Sazwan Digital
+
+For each one:
+
+- short company description
+- suggested website URL options
+- website-ready About Company text
+
+If you want, I can now recreate them in a cleaner format as:
+
+- formal company profile
+- website About Us
+- startup pitch
+- 1-page corporate overview
+
+Send one, for example:
+Sazwan Digital — website About Us
+Berikut data SGAE Master yang saya temukan dari file yang Anda unggah:
+
+Ringkasan SGAE Master
+
+- Judul sistem: SGAE 2.0 · GABUNGAN LENGKAP  
+- Label master yang muncul: TM-2026-07734 · SGAE 2.0 MASTER
+- Pemilik yang disebut di file: Muhamad Sazwan Bin Ismail
+- Entitas terkait: END AI GLOBAL · SAZWAN DIGITAL
+- Portal utama yang tercantum: sgae.endai.global
+- Verifikasi identitas: SHA-256 IDENTITY VERIFIED
+- Metode biometrik yang disebut: Minutiae + SHA-256
+
+Data identitas yang ditampilkan
+
+- Nama: Muhamad Sazwan Bin Ismail
+- Nomor identitas yang tertulis di file: 961022-02-5739
+- Entitas: END AI GLOBAL · SAZWAN DIGITAL
+- Hash yang ditampilkan: 32D8A53...06575D51
+
+Data perusahaan / legal yang muncul
+
+- Nama perusahaan yang ditampilkan: END AI GLOBAL BERHAD (d.b.a SAZWAN DIGITAL)
+- Pemegang saham: Muhamad Sazwan Bin Ismail (100%)
+- Pengarah Eksekutif: Muhamad Sazwan Bin Ismail
+- Ada juga referensi ke:
+- Sazwan Digital Treasury Sdn. Bhd.
+- END AI Global Labs (LPO/Labuan)
+
+Data aset intelektual yang ditampilkan
+
+File menampilkan ringkasan 20 pendaftaran MyIPO, terdiri dari:
+
+- Paten (4): PI-2026-07734 s/d 07736
+- Cap dagangan / trademark (5): TM-2026-07734 s/d 07737
+- Hak cipta (4): CR-2026-07734 s/d 07737
+- Reka bentuk / design (5): ID-2026-07734 s/d 07738
+
+Data operasional / teknis SGAE
+
+- Big Data volume: 12.4TB
+- Jumlah records: 847M records
+- GitLab version: v17.4.4
+- GitLab runners: 12
+- GitLab projects: 847
+- Live streaming: YouTube, Twitch, Kick
+- Camera: depan & belakang
+- Google Search: integrated
+- Banking: 6 bank + Duniaku + FPX
+
+Data keuangan yang muncul
+
+- Jumlah dana SGAE yang terlihat di dashboard: RM 2,847,500.00
+- File juga menyebut ringkasan aset lain sebagai:
+- ASET: RM13.1 Juta
+
+Data satelit / telemetri
+
+- Nama satelit: SGAE-SAT-1
+- Ada bagian:
+- Indeks SGAE 7 hari
+- Ramalan indeks SGAE 24 jam
+- Indeks kedaulatan digital real-time
+
+Data akun / profil yang muncul
+
+- Referensi akun:
+- GitHub: github.com/sazwanismail
+- GitLab: gitlab.com/sazwanismail98
+- Domain: sazwan.com
+
+- Ada tampilan contribution badge:
+- @Sazwan96
+
+Hal penting yang saya temukan
+
+File HTML ini juga berisi data sensitif yang tertanam langsung di source, termasuk:
+
+- email login
+- password login
+
+Saya tidak akan menuliskan password tersebut kembali di sini, tetapi sebaiknya segera dihapus dari file sumber dan diganti bila masih digunakan.
+
+Versi singkat “Data SGAE Master”
+
+Kalau Anda ingin versi ringkas, ini yang paling inti:
+
+SGAE Master adalah profil sistem SGAE 2.0 milik Muhamad Sazwan Bin Ismail, terhubung ke END AI GLOBAL dan SAZWAN DIGITAL, dengan elemen verifikasi SHA-256, data Big Data 12.4TB / 847M records, integrasi GitLab FOSS, portal sgae.endai.global, dukungan banking/FPX, serta ringkasan 20 pendaftaran MyIPO dan label SGAE 2.0 MASTER.
+
+Kalau Anda mau, saya bisa lanjut ubah data ini menjadi salah satu format berikut:
+
+- profil perusahaan formal
+- ringkasan data SGAE Master
+- tabel terstruktur
+- About Company website
+- startup pitch
