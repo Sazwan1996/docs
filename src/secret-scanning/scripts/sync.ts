@@ -1,20 +1,12 @@
-/**
- * Required env variables:
- *
- * GITHUB_TOKEN
- *
- * Syncs the
- * https://github.com/github/token-scanning-service/blob/main/docs/public-docs
- * directory to src/secret-scanning/data/pattern-docs
- */
+// Required env variable: GITHUB_TOKEN.
+// Syncs https://github.com/github/token-scanning-service/blob/main/docs/public-docs into
+// src/secret-scanning/data/pattern-docs.
 import { writeFile, mkdir } from 'fs/promises'
 import { load, dump } from 'js-yaml'
 import path from 'path'
 
 import { getDirectoryContents } from '@/workflows/git-utils'
 import schema from '@/secret-scanning/data/public-docs-schema'
-// This is temporarily being imported until the subsequent modules
-// have been converted to TypeScript.
 import { validateJson } from '@/tests/lib/validate-json-schema'
 import { formatAjvErrors } from '@/tests/helpers/schemas'
 
@@ -33,7 +25,6 @@ async function main() {
   const files = await getDirectoryContents(owner, repo, ref, directory)
 
   for (const file of files) {
-    // ensure yaml can be parsed
     let yamlData
     try {
       yamlData = load(file.content)
@@ -42,7 +33,6 @@ async function main() {
       throw error
     }
 
-    // ensure yaml is valid against the schema
     const { isValid, errors } = validateJson(schema, yamlData)
 
     if (!isValid && errors) {

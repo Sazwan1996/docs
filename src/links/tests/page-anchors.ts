@@ -7,6 +7,7 @@ import {
   versionFromResolvedKey,
 } from '@/links/lib/page-anchors'
 import type { Page } from '@/types'
+import { latest } from '@/versions/lib/enterprise-server-releases'
 
 describe('versionFromResolvedKey', () => {
   test('returns null for an unversioned (free-pro-team) key', () => {
@@ -20,8 +21,8 @@ describe('versionFromResolvedKey', () => {
   })
 
   test('reads an explicit enterprise-server release prefix', () => {
-    expect(versionFromResolvedKey('/en/enterprise-server@3.17/actions/foo')).toBe(
-      'enterprise-server@3.17',
+    expect(versionFromResolvedKey(`/en/enterprise-server@${latest}/actions/foo`)).toBe(
+      `enterprise-server@${latest}`,
     )
   })
 
@@ -72,7 +73,7 @@ describe('findLinkLines', () => {
   })
 
   test('does not match a fragment that merely starts with the needle', () => {
-    // A substring search would report line 1 for `/a#foo` because `/a#foobar` starts with it.
+    // A substring search would report /a#foobar as a match for /a#foo.
     const content = ['[x](/a#foobar)', '[y](/a#foo)'].join('\n')
     expect(findLinkLines(content, '/a#foo')).toEqual([2])
   })
@@ -105,8 +106,7 @@ describe('findLinkLines', () => {
 })
 
 describe('resolveLinkKeyForVersion', () => {
-  // A GHEC-only target has no unversioned permalink, so a bare href only resolves when
-  // retried against the source page's version.
+  // GHEC-only targets need source-version retry because they have no unversioned permalink.
   const pageMap = {
     '/en/get-started/foo': {} as Page,
     '/en/enterprise-cloud@latest/admin/bar': {} as Page,
@@ -147,6 +147,24 @@ describe('resolveLinkKeyForVersion', () => {
   test('returns null when the target does not exist in that version', () => {
     expect(resolveLinkKeyForVersion('/admin/bar', 'enterprise-server@3.17', pageMap)).toBe(null)
     expect(resolveLinkKeyForVersion('/nope/nope', 'free-pro-team@latest', pageMap)).toBe(null)
+  })
+
+  // Shared targets have FPT and enterprise keys; enterprise runs must prefer the latter.
+  const sharedPageMap = {
+    '/en/get-started/shared': {} as Page,
+    '/en/enterprise-server@3.17/get-started/shared': {} as Page,
+  }
+
+  test('prefers the source version over the versionless key', () => {
+    expect(
+      resolveLinkKeyForVersion('/get-started/shared', 'enterprise-server@3.17', sharedPageMap),
+    ).toBe('/en/enterprise-server@3.17/get-started/shared')
+  })
+
+  test('still resolves to the versionless key on FPT', () => {
+    expect(
+      resolveLinkKeyForVersion('/get-started/shared', 'free-pro-team@latest', sharedPageMap),
+    ).toBe('/en/get-started/shared')
   })
 
   test('ignores a fragment and query string', () => {

@@ -1,9 +1,17 @@
-# This script creates a new repository for an archived version of GitHub Enterprise Server documentation.
-# Please update the version variable first.
-# You may wish to run this script a little bit at a time instead of all at once incase there are any errors.
+# Creates a repository for an archived GitHub Enterprise Server documentation version.
+# Pass the version as the first argument, and run sections one at a time when inspecting failures.
 
 version=$1
 cd ~/Documents/gh/github
+
+# Numeric team IDs survive team renames; slugs do not.
+# Repo creation, CODEOWNERS, and custom properties require slugs, so resolve current slugs.
+org_id=9919
+docs_team_id=325922
+docs_eng_team_id=3935808
+docs_team=$(gh api "/organizations/$org_id/team/$docs_team_id" --jq .slug)
+docs_eng_team=$(gh api "/organizations/$org_id/team/$docs_eng_team_id" --jq .slug)
+
 echo "--- Creating repository for github/docs-ghes-$version"
 echo "--- gh repo create"
 gh repo create \
@@ -15,7 +23,7 @@ gh repo create \
   --disable-wiki \
   --license="CC-BY-4.0" \
   --private \
-  --team="docs-engineering" \
+  --team="$docs_eng_team" \
   --homepage="https://github.github.com/docs-ghes-$version/"
 echo "--- gh repo edit"
 gh repo edit \
@@ -27,8 +35,8 @@ gh repo edit \
   --enable-projects=false \
   --enable-merge-commit=false \
   --enable-rebase-merge=false
-echo "--- github/docs-engineering as admin"
-gh api -X PUT "/orgs/github/teams/docs-engineering/repos/github/docs-ghes-$version" \
+echo "--- github/$docs_eng_team as admin"
+gh api -X PUT "/organizations/$org_id/team/$docs_eng_team_id/repos/github/docs-ghes-$version" \
         -f 'permission=admin' --silent
 echo "--- github/employees as read"
 gh api -X PUT "/orgs/github/teams/employees/repos/github/docs-ghes-$version" --silent
@@ -66,7 +74,7 @@ gh api -X POST "/repos/github/docs-ghes-$version/pages" \
 echo "--- Update custom properties"
 gh api --method PATCH /repos/github/docs-ghes-$version/properties/values \
   -f "properties[][property_name]=ownership-name" \
-  -f "properties[][value]=@github/docs" \
+  -f "properties[][value]=@github/$docs_team" \
   -f "properties[][property_name]=ownership-type" \
   -f "properties[][value]=Team" \
   --silent
@@ -74,7 +82,7 @@ echo "--- FILE UPDATES"
 cd "docs-ghes-$version"
 echo "--- docs engineering as codeowners"
 touch CODEOWNERS
-echo "* @github/docs-engineering" > CODEOWNERS
+echo "* @github/$docs_eng_team" > CODEOWNERS
 echo "--- add index.html file"
 touch index.html
 echo "<h1>GitHub Enterprise Server $version Docs</h1>" > index.html

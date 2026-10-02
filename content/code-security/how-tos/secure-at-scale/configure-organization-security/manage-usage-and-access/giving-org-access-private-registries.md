@@ -4,7 +4,9 @@ shortTitle: Give access to private registries
 intro: If your organization uses private registries, you can improve the results of {% data variables.product.prodname_code_scanning %} analysis and enable {% data variables.product.prodname_dependabot %} to maintain more dependencies by setting up access to these registries.
 allowTitleToDifferFromFilename: true
 versions:
-  feature: org-private-registry
+  fpt: '*'
+  ghec: '*'
+  ghes: '*'
 redirect_from:
   - /code-security/securing-your-organization/enabling-security-features-in-your-organization/giving-org-access-private-registries
 contentType: how-tos
@@ -14,7 +16,7 @@ category:
 
 ## About the importance of providing access to private registries
 
-When code in a repository has dependencies that are stored in a private registry, some security features need access to the registry to enable them to work effectively. Without access to all the dependencies of a repository, the effectiveness of {% ifversion code-quality %}{% data variables.product.prodname_code_quality_short %} ({% data variables.release-phases.public_preview %}), {% endif %}{% data variables.product.prodname_code_scanning %} default setup and {% data variables.product.prodname_dependabot %} are limited.
+When code in a repository has dependencies that are stored in a private registry, some security features need access to the registry to enable them to work effectively. Without access to all the dependencies of a repository, the effectiveness of {% ifversion code-quality %}{% data variables.product.prodname_code_quality_short %}, {% endif %}{% data variables.product.prodname_code_scanning %} default setup and {% data variables.product.prodname_dependabot %} are limited.
 
 ## {% data variables.product.prodname_code_scanning_caps %} default setup access to private registries
 
@@ -29,6 +31,12 @@ When you configure access to the private registries used in your organization, {
 | C# | NuGet Feed |
 | Go | GOPROXY server, Git Source |
 | Java | Maven Repository |
+
+{% ifversion codeql-config-property %}
+
+Additionally, _Git Source_ registries are supported for granting {% data variables.product.prodname_code_scanning %} access to configuration files in internal or private repositories. For more information about customizing {% data variables.product.prodname_code_scanning %} using custom configuration files, see [AUTOTITLE](/code-security/reference/code-scanning/workflow-configuration-options#custom-configuration-files).
+
+{% endif %}
 
 > [!TIP]
 > You can define one of each type of registry for each organization. If the codebases in your organization use more than one registry of a given type, you should set up a unified access point or define access to the most important registry for the codebases in that organization.
@@ -45,7 +53,7 @@ You need to be an **organization owner** to set up access to private registries 
    * **Type** is the type of registry.
 1. Select the authentication method for the registry:
    * **Token**: Enter the token used to authenticate with the registry.
-   * **Username and password**: Enter the username and password used to authenticate with the registry. Some types of authentication tokens, such as a {% data variables.product.github %} {% data variables.product.pat_generic_title_case %}, are tied to a particular user identity. Select this option for these and enter the relevant username as **Username** and the token as **Password**.
+   * **Username and password**: Enter the username and password used to authenticate with the registry. Some types of authentication tokens, such as a {% data variables.product.github %} {% data variables.product.pat_generic_title_case %}, are tied to a particular user identity. Select this option for these and enter the name of the user who created the token as **Username** and the token itself as **Password**. 
    {% ifversion org-private-registry-oidc %}
    * **OIDC (OpenID Connect)**: Use short-lived credentials from a cloud identity provider instead of storing long-lived secrets. When you select this option, choose a provider and fill in the provider-specific fields. For more information, see [Configuring OIDC authentication for a private registry](#configuring-oidc-authentication-for-a-private-registry).
    {% endif %}
@@ -100,9 +108,6 @@ See [AUTOTITLE](/code-security/how-tos/secure-your-supply-chain/manage-your-depe
 
 OIDC (OpenID Connect) authentication allows {% data variables.product.prodname_dependabot %} to use short-lived credentials from your cloud identity provider to access private registries, eliminating the need to store long-lived secrets. With OIDC, credentials are generated dynamically for each {% data variables.product.prodname_dependabot %} update job. You must configure a trust relationship between your cloud provider and {% data variables.product.github %} before {% data variables.product.prodname_dependabot %} can authenticate.
 
-> [!NOTE]
-> OIDC authentication for organization-level private registries is currently supported by {% data variables.product.prodname_dependabot %}. It is not supported by {% data variables.product.prodname_code_scanning %} default setup.
-
 When you select **OIDC** as the authentication method for a private registry, choose one of the supported providers and fill in the required fields:
 
 * **Azure**: Enter the **Tenant ID** (Azure AD tenant ID) and **Client ID** (Azure AD application client ID). You must configure a federated credential in Azure AD that trusts {% data variables.product.github %}'s OIDC provider.
@@ -120,8 +125,6 @@ For more information about how OIDC works, see [AUTOTITLE](/actions/concepts/sec
 {% ifversion code-quality %}
 
 ## {% data variables.product.prodname_code_quality_short %} access to private registries
-
-{% data reusables.code-quality.code-quality-preview-note %}
 
 {% data variables.product.prodname_code_quality %} can use any of the organization-level private registries that are available when it is enabled for a repository.
 

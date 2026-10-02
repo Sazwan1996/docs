@@ -615,7 +615,7 @@
       "name": "mergePullRequest",
       "id": "mergepullrequest",
       "href": "/graphql/reference/pulls#mutation-mergepullrequest",
-      "description": "<p>Merge a pull request.</p>",
+      "description": "<p>Merge a pull request.</p>\n<div class=\"ghd-alert ghd-alert-accent\" data-container=\"alert\"><p class=\"ghd-alert-title\"><svg version=\"1.1\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" class=\"octicon mr-2\" aria-hidden><path d=\"M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z\"></path></svg></p>\n<p>\nWe recommend using the <a href=\"/en/enterprise-cloud@latest/rest/pulls/pulls#merge-a-pull-request-asynchronously\">asynchronous merge REST\nAPI</a> instead.\nThis mutation does not support stacked pull requests.</p>\n</div>",
       "isDeprecated": false,
       "inputFields": [
         {
@@ -2936,6 +2936,16 @@
                 "name": "String",
                 "id": "string",
                 "href": "/graphql/reference/other#scalar-string"
+              }
+            },
+            {
+              "name": "excludeUserLinked",
+              "defaultValue": false,
+              "description": "<p>Exclude manually linked Issues.</p>",
+              "type": {
+                "name": "Boolean",
+                "id": "boolean",
+                "href": "/graphql/reference/other#scalar-boolean"
               }
             },
             {
@@ -8310,6 +8320,28 @@
       "category": "pulls"
     },
     {
+      "name": "PullRequestReviewThreadResolutionReason",
+      "id": "pullrequestreviewthreadresolutionreason",
+      "href": "/graphql/reference/pulls#enum-pullrequestreviewthreadresolutionreason",
+      "description": "<p>The possible reasons a pull request review thread was resolved.</p>",
+      "isDeprecated": false,
+      "values": [
+        {
+          "name": "ADDRESSED",
+          "description": "<p>The review comment was addressed.</p>"
+        },
+        {
+          "name": "INVALID",
+          "description": "<p>The review comment is invalid.</p>"
+        },
+        {
+          "name": "WONT_FIX",
+          "description": "<p>The review comment will not be addressed.</p>"
+        }
+      ],
+      "category": "pulls"
+    },
+    {
       "name": "PullRequestReviewThreadSubjectType",
       "id": "pullrequestreviewthreadsubjecttype",
       "href": "/graphql/reference/pulls#enum-pullrequestreviewthreadsubjecttype",
@@ -8366,6 +8398,10 @@
         {
           "name": "ADDED_TO_PROJECT_V2_EVENT",
           "description": "<p>Represents a<code>added_to_project_v2</code>event on a given issue or pull request.</p>"
+        },
+        {
+          "name": "ADDED_TO_STACK_EVENT",
+          "description": "<p>Represents an<code>added_to_stack</code>event on a given pull request.</p>"
         },
         {
           "name": "ARCHIVED_EVENT",
@@ -8606,6 +8642,10 @@
         {
           "name": "REMOVED_FROM_PROJECT_V2_EVENT",
           "description": "<p>Represents a<code>removed_from_project_v2</code>event on a given issue or pull request.</p>"
+        },
+        {
+          "name": "REMOVED_FROM_STACK_EVENT",
+          "description": "<p>Represents a<code>removed_from_stack</code>event on a given pull request.</p>"
         },
         {
           "name": "RENAMED_TITLE_EVENT",
@@ -10559,6 +10599,13 @@
           "type": "String",
           "id": "string",
           "href": "/graphql/reference/other#scalar-string"
+        },
+        {
+          "name": "resolutionReason",
+          "description": "<p>The reason a Copilot code review thread was resolved.</p>",
+          "type": "PullRequestReviewThreadResolutionReason",
+          "id": "pullrequestreviewthreadresolutionreason",
+          "href": "/graphql/reference/pulls#enum-pullrequestreviewthreadresolutionreason"
         },
         {
           "name": "threadId",

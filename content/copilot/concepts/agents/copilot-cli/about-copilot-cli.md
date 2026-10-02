@@ -65,7 +65,8 @@ To use the CLI programmatically, include the `-p` or `--prompt` command-line opt
 
 ## Running {% data variables.copilot.copilot_cli_short %} commands in a sandbox
 
-{% data reusables.cli.public-preview-sandbox %}
+> [!NOTE]
+> {% data reusables.cli.public-preview-sandbox %}
 
 To prevent {% data variables.product.prodname_copilot_short %} from modifying files you don't want it to touch, you can force agents to run commands within a local sandboxed environment. Alternatively, you can run an entire CLI session in an isolated environment in the cloud. For more information, see [AUTOTITLE](/copilot/concepts/about-cloud-and-local-sandboxes).
 
@@ -80,7 +81,7 @@ You can start a {% data variables.copilot.copilot_cli_short %} session inside an
 To start a cloud-backed session, run:
 
 ```bash copy
-copilot ‑‑cloud
+copilot --cloud
 ```
 
 ## Use cases for {% data variables.copilot.copilot_cli %}
@@ -118,6 +119,10 @@ The following sections provide examples of tasks you can complete with {% data v
 * Ask {% data variables.product.prodname_copilot_short %} to explain why a change it made is not working as expected, or tell {% data variables.product.prodname_copilot_short %} to fix a problem with the last change it made. For example:
 
   `You said: "The application is now running on http://localhost:3002 and is fully functional!" but when I browse to that URL I get "This site can't be reached"`
+
+### Computer use
+
+In local sessions on macOS and Windows, you can enable computer use to let {% data variables.product.prodname_copilot_short %} interact with desktop applications. This capability is useful for workflows in legacy and GUI-only software that do not provide an API, command-line interface, or MCP integration. For more information, see [AUTOTITLE](/copilot/concepts/agents/computer-use).
 
 ### Tasks involving {% data variables.product.prodname_dotcom_the_website %}
 
@@ -203,6 +208,10 @@ You can customize {% data variables.copilot.copilot_cli %} in a number of ways:
 When you use {% data variables.copilot.copilot_cli_short %}, {% data variables.product.prodname_copilot_short %} can perform tasks on your behalf, such as executing or modifying files, or running shell commands.
 
 You should therefore always keep security considerations in mind when using {% data variables.copilot.copilot_cli_short %}, just as you would when working directly with files yourself, or running commands directly in your terminal. You should always review suggested commands carefully when {% data variables.copilot.copilot_cli_short %} requests your approval.
+
+### Content exclusion
+
+For {% data variables.copilot.copilot_business_short %} and {% data variables.copilot.copilot_enterprise_short %} users, {% data variables.copilot.copilot_cli_short %} respects content exclusion policies configured at the enterprise, organization, and repository levels. Excluded files are not used as context. For more information, see [AUTOTITLE](/copilot/concepts/context/content-exclusion).
 
 ### Trusted directories
 
@@ -321,7 +330,7 @@ Alternatively, you can run {% data variables.copilot.copilot_cli_short %} in a v
 * **MCP servers in {% data variables.product.prodname_copilot_short %}**, which controls whether MCP servers can be used at all by {% data variables.product.prodname_copilot_short %}.
 * **MCP Registry URL**, which controls which MCP registry {% data variables.product.prodname_copilot_short %} will allow MCP servers to be used from.
 
-For more information about these policies, see [AUTOTITLE](/copilot/concepts/mcp-management#mcp-policy-settings).
+For more information about these policies, see [AUTOTITLE](/copilot/concepts/enterprise/mcp-management#mcp-allowlists).
 
 ## Model usage
 

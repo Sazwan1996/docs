@@ -1,5 +1,5 @@
 ---
-title: 'Stacked pull requests 🥞'
+title: 'Stacked pull requests'
 shortTitle: 'Stacked pull requests'
 intro: 'Use stacked pull requests to break large code changes into a chain of smaller, dependent pull requests you can review and merge independently.'
 versions:
@@ -23,7 +23,7 @@ children:
   - /content/pull-requests/tutorials/stack-code-changes-in-pull-requests
   - /content/pull-requests/reference/stacked-pull-requests
   - /content/pull-requests/reference/stacked-prs-cli-commands
-  - /content/pull-requests/reference/stacked-pull-requests-rest-and-graphql-apis
+  - /content/pull-requests/reference/stacked-pull-requests-apis-and-webhooks
   - /content/rest/pulls/pulls
   - /content/graphql/reference/pulls
   - /content/webhooks/webhook-events-and-payloads

@@ -491,8 +491,6 @@ Supported value: the numeric identifier of a milestone.
 >[!TIP]
 >If you view a milestone, the final part of the page URL, after `milestone`, is the identifier. For example: `https://github.com/<org>/<repo>/milestone/3`, see [AUTOTITLE](/issues/using-labels-and-milestones-to-track-work/viewing-your-milestones-progress).
 
-{% ifversion dependabot-multi-ecosystem-support %}
-
 ## `multi-ecosystem-groups` {% octicon "versions" aria-label="Version updates" height="24" %}
 
 Define groups that span multiple package ecosystems to get a single {% data variables.product.prodname_dependabot %} pull request that updates all supported package ecosystems. This approach helps reduce the number of {% data variables.product.prodname_dependabot %} pull requests you receive and streamlines your dependency update workflow.
@@ -534,8 +532,6 @@ updates:
     multi-ecosystem-group: "infrastructure"
 ```
 
-{% endif %}
-
 ## `open-pull-requests-limit` {% octicon "versions" aria-label="Version updates only" height="24" %}
 
 Change the limit on the maximum number of pull requests for version updates open at any time.
@@ -563,7 +559,7 @@ Package manager | YAML value      | Supported versions |
 | {% ifversion dependabot-bazel-support %} |
 | Bazel         | `bazel`          | v7, v8, v9               |
 | {% endif %} |
-| Bun | `bun`         | >=v1.2.5              |
+| Bun | `bun`         | >=v1.1.39              |
 | Bundler | `bundler` | v2 |
 | Cargo       | `cargo`          | v1               |
 | Composer       | `composer`       | v2         |
@@ -577,9 +573,7 @@ Package manager | YAML value      | Supported versions |
 | Docker         | `docker`         | v1               |
 | Docker Compose | `docker-compose`         | v2, v3               |
 | .NET SDK       | `dotnet-sdk`         | >=.NET Core 3.1           |
-| {% ifversion dependabot-helm-support %} |
 | Helm Charts            | `helm`            | v3               |
-| {% endif %} |
 | Hex            | `mix`            | v1               |
 | {% ifversion dependabot-julia-support %} |
 | Julia                  | `julia`           | >=v1.10               |
@@ -593,14 +587,14 @@ Package manager | YAML value      | Supported versions |
 | {% ifversion dependabot-nix-support %} |
 | Nix flakes | `nix`            | Not applicable   |
 | {% endif %} |
-| npm            | `npm`            |  v7, v8, v9, v10   |
+| npm            | `npm`            |  v7, v8, v9, v10, v11   |
 | NuGet          | `nuget`          | <=6.12.0 |
 | {% ifversion dependabot-opentofu-support %} |
 | OpenTofu     | `opentofu`       | Not applicable     |
 | {% endif %} |
-| pip         | `pip`            | 24.2             |
+| pip         | `pip`            | 26.1.1             |
 | pip-compile | `pip`            | 7.5.3            |
-| pipenv      | `pip`            | <= 2024.4.1      |
+| pipenv      | `pip`            | 2024.4.1      |
 | pnpm   | `npm`            | v7, v8, v9, v10   |
 | poetry      | `pip`    | v2    |
 | {% ifversion dependabot-pre-commit-support %} |
@@ -613,9 +607,9 @@ Package manager | YAML value      | Supported versions |
 | {% ifversion dependabot-sbt-support %} |
 | sbt          | `sbt`            | Not applicable   |
 | {% endif %} |
-| Swift   | `swift`      | v5  |
-| Terraform    | `terraform`      | >= 0.13, <= 1.10.x  |
-| uv           | `uv`             | v0 |
+| Swift   | `swift`      | v5, v6  |
+| Terraform    | `terraform`      | >= 0.13, <= 1.15.x  |
+| uv           | `uv`             | v0.11 |
 | {% ifversion dependabot-vcpkg-support %} |
 | vcpkg       | `vcpkg`          | Not applicable   |
 | {% endif %} |
@@ -808,9 +802,7 @@ Reviewers must have at least read access to the repository.
 | [`interval`](#interval) | **Required.** Defines the frequency for {% data variables.product.prodname_dependabot %}. |
 | [`day`](#day) | Specify the day to run for a **weekly** interval. |
 | [`time`](#time) | Specify the time to run. |
-| {% ifversion dependabot-schedule-updates %} |
 | [`cronjob`](#cronjob) | Defines the cron expression if the interval type is `cron`. |
-| {% endif %} |
 | [`timezone`](#timezone) | Specify the timezone of the `time` value.  |
 
 ### `interval`
@@ -830,7 +822,7 @@ Each package manager **must** define a schedule interval.
 >[!NOTE]
 > The supported values `quarterly`, `semiannually`, and `yearly` are only available on {% data variables.product.prodname_ghe_server %} from version 3.19.
 
-By default, {% data variables.product.prodname_dependabot %} randomly assigns a time to apply all the updates in the configuration file. You can use the `time` and `timezone` parameters to set a specific runtime for all intervals.  {% ifversion dependabot-schedule-updates %}If you use a `cron` interval, you can define the update time with a `cronjob` expression.{% endif %}
+By default, {% data variables.product.prodname_dependabot %} randomly assigns a time to apply all the updates in the configuration file. You can use the `time` and `timezone` parameters to set a specific runtime for all intervals. If you use a `cron` interval, you can define the update time with a `cronjob` expression.
 
 ### `day`
 
@@ -843,8 +835,6 @@ Optionally, run **weekly** updates for a package manager on a specific day of th
 Format: `hh:mm`
 
 Optionally, run all updates for a package manager at a specific time of day. By default, times are interpreted as UTC.
-
-{% ifversion dependabot-schedule-updates %}
 
 ### `cronjob`
 
@@ -877,8 +867,6 @@ updates:
       cronjob: "0 9 * * *"
 ```
 
-{% endif %}
-
 ### `timezone`
 
 Specify a time zone for the `time` value. The default time zone is `UTC`.
@@ -891,7 +879,7 @@ Define a specific branch to check for version updates and to target pull request
 
 {% data variables.product.prodname_dependabot %} default behavior:
 
-* {% data variables.product.prodname_dependabot %} uses the default branch for the repository, see [About the default branch](/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches#about-the-default-branch).
+* {% data variables.product.prodname_dependabot %} uses the default branch for the repository, see [About the default branch](/pull-requests/reference/branches#about-the-default-branch).
 
 When `target-branch` is defined:
 
@@ -982,7 +970,7 @@ Supported values: `true` or `false`
 
 ## `versioning-strategy` {% octicon "versions" aria-label="Version updates" height="24" %} {% octicon "shield-check" aria-label="Security updates" height="24" %}
 
-Supported by: `bundler`, `cargo`, `composer`, `mix`, `npm`, `pip`, `pub`, and `uv`
+Supported by: `bundler`, `cargo`, `composer`, `helm`, `mix`, `npm`, `pip`, `pub`, and `uv`
 
 Define how {% data variables.product.prodname_dependabot %} should edit manifest files. For examples, see [AUTOTITLE](/code-security/how-tos/secure-your-supply-chain/manage-your-dependency-security/controlling-dependencies-updated#defining-a-versioning-strategy).
 

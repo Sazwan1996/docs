@@ -125,7 +125,7 @@ describe('contentFilesToPageKeys', () => {
       { filename: 'content/get-started/bar.md', status: 'added' },
       { filename: 'content/get-started/foo.md', status: 'modified' },
     ])
-    // One key per source page, deduped, covering every version-URL of the page.
+    // One surrogate key covers every version URL for a source page.
     expect(keys).toEqual([
       'language:en,path:get-started/foo.md',
       'language:en,path:get-started/bar.md',
@@ -154,7 +154,9 @@ describe('chunk', () => {
 })
 
 describe('hardPurgeSurrogateKeys', () => {
-  // A minimal stand-in for a fetch Response, with a case-insensitive headers.get.
+  // Tests skip the 20-second between-pass delay.
+  const noSleep = async () => {}
+
   function fakeResponse(
     status: number,
     { headers = {}, ok = false }: { headers?: Record<string, string>; ok?: boolean } = {},
@@ -170,14 +172,16 @@ describe('hardPurgeSurrogateKeys', () => {
     }
   }
 
-  test('sends one hard batch purge with a surrogate_keys body (no soft header)', async () => {
+  test('sends one hard batch purge per pass with a surrogate_keys body (no soft header)', async () => {
     fetchWithRetry.mockResolvedValue({ ok: true })
     await hardPurgeSurrogateKeys(
       ['language:en,path:a.md', 'language:en,path:b.md'],
       'token-123',
       'svc-1',
+      undefined,
+      noSleep,
     )
-    expect(fetchWithRetry).toHaveBeenCalledTimes(1)
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2)
     const [url, init] = fetchWithRetry.mock.calls[0]
     expect(url).toBe('https://api.fastly.com/service/svc-1/purge')
     expect(init.method).toBe('POST')
@@ -186,46 +190,82 @@ describe('hardPurgeSurrogateKeys', () => {
     expect(JSON.parse(init.body)).toEqual({
       surrogate_keys: ['language:en,path:a.md', 'language:en,path:b.md'],
     })
+    expect(fetchWithRetry.mock.calls[1][1].body).toBe(init.body)
   })
 
-  test('splits more than 256 keys into multiple batches', async () => {
+  test('waits between the two passes to let the shield re-populate first', async () => {
+    fetchWithRetry.mockResolvedValue({ ok: true })
+    const waits: number[] = []
+    await hardPurgeSurrogateKeys(
+      ['language:en,path:a.md'],
+      'tok',
+      'svc',
+      undefined,
+      async (ms: number) => {
+        waits.push(ms)
+      },
+    )
+    expect(waits).toEqual([20_000])
+  })
+
+  test('splits more than 256 keys into multiple batches, per pass', async () => {
     fetchWithRetry.mockResolvedValue({ ok: true })
     const keys = Array.from({ length: 257 }, (_unused, i) => `language:en,path:p${i}.md`)
-    await hardPurgeSurrogateKeys(keys, 'tok', 'svc')
-    expect(fetchWithRetry).toHaveBeenCalledTimes(2)
+    await hardPurgeSurrogateKeys(keys, 'tok', 'svc', undefined, noSleep)
+    // 2 batches x 2 passes.
+    expect(fetchWithRetry).toHaveBeenCalledTimes(4)
     expect(JSON.parse(fetchWithRetry.mock.calls[0][1].body).surrogate_keys).toHaveLength(256)
     expect(JSON.parse(fetchWithRetry.mock.calls[1][1].body).surrogate_keys).toHaveLength(1)
+    expect(JSON.parse(fetchWithRetry.mock.calls[2][1].body).surrogate_keys).toHaveLength(256)
+    expect(JSON.parse(fetchWithRetry.mock.calls[3][1].body).surrogate_keys).toHaveLength(1)
   })
 
-  test('throws if any batch fails, after attempting all of them', async () => {
+  test('throws if any batch fails, after attempting all of them in both passes', async () => {
     fetchWithRetry.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({
       ok: false,
       status: 500,
       statusText: 'err',
       text: async () => 'boom',
     })
+    fetchWithRetry.mockResolvedValue({ ok: true })
     const keys = Array.from({ length: 300 }, (_unused, i) => `language:en,path:p${i}.md`)
-    await expect(hardPurgeSurrogateKeys(keys, 'tok', 'svc')).rejects.toThrow(
-      /1 of 2 batch purge\(s\) failed/,
+    await expect(hardPurgeSurrogateKeys(keys, 'tok', 'svc', undefined, noSleep)).rejects.toThrow(
+      /1 of 4 batch purge\(s\) failed/,
     )
+    expect(fetchWithRetry).toHaveBeenCalledTimes(4)
+  })
+
+  test('still runs the second pass when the first one fails outright', async () => {
+    fetchWithRetry
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'err',
+        text: async () => 'boom',
+      })
+      .mockResolvedValue({ ok: true })
+    await expect(
+      hardPurgeSurrogateKeys(['language:en,path:a.md'], 'tok', 'svc', undefined, noSleep),
+    ).rejects.toThrow(/1 of 2 batch purge\(s\) failed/)
     expect(fetchWithRetry).toHaveBeenCalledTimes(2)
   })
 
   test('retries a 429, honoring the hint, then succeeds', async () => {
     fetchWithRetry
       .mockResolvedValueOnce(fakeResponse(429, { headers: { 'retry-after': '0' } }))
-      .mockResolvedValueOnce(fakeResponse(200, { ok: true }))
-    await hardPurgeSurrogateKeys(['language:en,path:a.md'], 'tok', 'svc', () => 0)
-    expect(fetchWithRetry).toHaveBeenCalledTimes(2)
+      .mockResolvedValue(fakeResponse(200, { ok: true }))
+    await hardPurgeSurrogateKeys(['language:en,path:a.md'], 'tok', 'svc', () => 0, noSleep)
+    // The first pass gets a 429 and retries once; the second pass makes one call.
+    expect(fetchWithRetry).toHaveBeenCalledTimes(3)
   })
 
   test('gives up after the retry budget and reports the batch as failed', async () => {
     fetchWithRetry.mockResolvedValue(fakeResponse(429, { headers: { 'retry-after': '0' } }))
     await expect(
-      hardPurgeSurrogateKeys(['language:en,path:a.md'], 'tok', 'svc', () => 0),
-    ).rejects.toThrow(/1 of 1 batch purge\(s\) failed/)
-    // Initial attempt + 5 retries.
-    expect(fetchWithRetry).toHaveBeenCalledTimes(6)
+      hardPurgeSurrogateKeys(['language:en,path:a.md'], 'tok', 'svc', () => 0, noSleep),
+    ).rejects.toThrow(/2 of 2 batch purge\(s\) failed/)
+    // Initial attempt plus 5 retries, times 2 passes.
+    expect(fetchWithRetry).toHaveBeenCalledTimes(12)
   })
 })
 
@@ -267,8 +307,7 @@ describe('rateLimitDelayMs', () => {
   })
 
   test('adds jitter on top of a server hint to decorrelate workers', () => {
-    // Math.random -> 0.5 gives jitter = floor(0.5 * 150) = 75ms, added on top of
-    // the honored 5000ms hint so concurrent retries don't wake in lockstep.
+    // Math.random of 0.5 adds 75 ms to the 5000 ms hint, so retries do not wake together.
     vi.spyOn(Math, 'random').mockReturnValue(0.5)
     expect(rateLimitDelayMs(fakeResponse({ 'retry-after': '5' }), 0)).toBe(5075)
   })
@@ -281,19 +320,18 @@ describe('rateLimitDelayMs', () => {
 
   test('clamps any delay to the maximum', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0)
-    // 1000 * (40 + 1) would be 41,000ms; clamped to 30,000.
+    // 1000 * (40 + 1) would be 41,000 ms, so the 30,000 ms cap applies.
     expect(rateLimitDelayMs(fakeResponse({}), 40)).toBe(30_000)
-    // A far-future server hint is likewise capped.
+    // The 30,000 ms cap also applies to far-future server hints.
     expect(rateLimitDelayMs(fakeResponse({ 'retry-after': '99999' }), 0)).toBe(30_000)
   })
 
   test('floors a stale or zero hint at the backoff instead of retrying instantly', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0)
-    // A negative Retry-After and an already-elapsed reset both compute to <= 0,
-    // but must not collapse the retry to 0ms; they floor at the backoff.
+    // Negative Retry-After and elapsed reset hints floor at backoff, so retries never hit 0 ms.
     expect(rateLimitDelayMs(fakeResponse({ 'retry-after': '-5' }), 0)).toBe(1000)
     expect(rateLimitDelayMs(fakeResponse({ 'fastly-ratelimit-reset': '1' }), 0)).toBe(1000)
-    // The floor grows with the attempt count, same as a hintless backoff.
+    // Hint floors use the same attempt-based backoff as missing hints.
     expect(rateLimitDelayMs(fakeResponse({ 'retry-after': '0' }), 2)).toBe(3000)
   })
 })

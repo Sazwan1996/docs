@@ -8,12 +8,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import { NavList } from '@primer/react-brand'
 
 import { ProductTreeNode, useMainContext } from '@/frame/components/context/MainContext'
-import { useAutomatedPageContext } from '@/automated-pipelines/components/AutomatedPageContext'
+import { useAutomatedPageContextOptional } from '@/automated-pipelines/components/AutomatedPageContext'
 import { nonAutomatedRestPaths } from '@/rest/lib/config'
 import { usePrefetchOnInteraction } from '@/frame/components/lib/prefetch'
 import { SidebarExpandStateProvider, useSidebarExpandState } from './useSidebarExpandState'
@@ -21,14 +22,26 @@ import { flattenDescendants, MAX_NAVLIST_LEVEL } from './sidebar-navlist-depth'
 
 import styles from './SidebarProduct.module.scss'
 
+// Brand NavList.SubNav wrappers use overflow-y hidden, so match only auto or scroll
+// to find the sidebar's own overflow container. Hidden rails return null.
+function findScrollableAncestor(element: Element): HTMLElement | null {
+  let node = element.parentElement
+  while (node) {
+    const { overflowY } = getComputedStyle(node)
+    if ((overflowY === 'auto' || overflowY === 'scroll') && node.scrollHeight > node.clientHeight) {
+      return node
+    }
+    node = node.parentElement
+  }
+  return null
+}
+
 type Router = ReturnType<typeof useRouter>
 
-// Brand NavList.Item renders a plain <a> (its `as` prop only accepts 'a' | 'button',
-// not next/link), so intercept clicks to restore next/link-style client-side
-// navigation. Modifier/middle clicks fall through to the browser so open-in-new-tab
-// still works, and the <a href> keeps links crawlable for SSR. Mirrors Breadcrumbs.tsx.
-// Returns true when it performed a client-side navigation (so the caller can move the
-// optimistic selection), false when the click was left to the browser.
+// Brand NavList.Item renders a plain anchor, not next/link, so intercept plain
+// left-clicks to restore client-side navigation. Modified clicks fall through for
+// separate tabs, the href keeps links crawlable for server-side rendering, and true
+// tells the caller to move the optimistic selection. Mirrors Breadcrumbs.tsx.
 function handleNavClick(router: Router, event: MouseEvent<HTMLElement>, href: string): boolean {
   if (
     event.defaultPrevented ||
@@ -42,24 +55,18 @@ function handleNavClick(router: Router, event: MouseEvent<HTMLElement>, href: st
     return false
   }
   event.preventDefault()
-  // hrefs already include the locale prefix (e.g. /en/...), so disable Next.js
-  // locale handling to avoid double-prefixing.
+  // Locale-prefixed hrefs need locale false so Next.js does not add the locale twice.
   router.push(href, undefined, { locale: false })
   return true
 }
 
-// The sidebar renders the full product tree (hundreds of nodes) and fully remounts
-// on every navigation (key={asPath} in SidebarNav). To keep per-item cost down we
-// subscribe to the router ONCE here and hand items a stable routePath plus stable
-// navigate/prefetch callbacks, instead of every item calling useRouter itself.
+// The sidebar renders hundreds of nodes and remounts on every navigation. Subscribe
+// once here so each item gets stable routePath, navigate, and prefetch values instead
+// of calling useRouter itself.
 type SidebarNavValue = {
-  // The real loaded route. Drives aria-current (the semantic "current page") and the
-  // auto-expanded active ancestor chain — both must reflect the page actually loaded.
+  // The loaded route drives aria-current and the auto-expanded active ancestor chain.
   routePath: string
-  // The in-flight click target, or null. Drives a VISUAL-ONLY optimistic accent bar
-  // (via data-pending) so the click feels acknowledged before the slow
-  // getServerSideProps page loads — without lying to assistive tech about the current
-  // page. Once navigation completes, the keyed remount clears it and routePath catches up.
+  // The in-flight click target drives a visual-only data-pending accent during slow loads.
   pendingHref: string | null
   navigate: (event: MouseEvent<HTMLElement>, href: string) => void
   prefetch: (href: string) => void
@@ -74,10 +81,8 @@ function useSidebarNav(): SidebarNavValue {
   return value
 }
 
-// Props for a leaf link's <a>: aria-current tracks the loaded page (semantics), while
-// data-pending marks the in-flight click so CSS can move the accent bar optimistically
-// without changing what screen readers announce as current. data-pending is only set
-// while a *different* page is loading, so it never double-marks the already-current item.
+// Leaf links keep aria-current on the loaded page and data-pending on a different
+// in-flight destination, so screen readers do not hear a loading page as current.
 function leafLinkProps(nav: SidebarNavValue, href: string) {
   return {
     'aria-current': (nav.routePath === href ? 'page' : false) as 'page' | false,
@@ -85,9 +90,8 @@ function leafLinkProps(nav: SidebarNavValue, href: string) {
   }
 }
 
-// Separate context for the REST-only scroll-spy state (full asPath with query+hash,
-// and query). Kept out of SidebarNavValue so its per-navigation identity churn
-// doesn't invalidate the memoized common items — only RestNavListItem consumes it.
+// Keep REST-only scroll-spy state out of SidebarNavValue so its per-navigation
+// identity churn invalidates only RestNavListItem.
 type RestNavValue = {
   asPath: string
   query: ReturnType<typeof useRouter>['query']
@@ -102,7 +106,6 @@ function useRestNav(): RestNavValue {
   return value
 }
 
-// Hover/focus handlers for a leaf link: warm the destination so the click is fast.
 function prefetchHandlers(prefetch: (href: string) => void, href: string) {
   return {
     onMouseEnter: () => prefetch(href),
@@ -110,12 +113,13 @@ function prefetchHandlers(prefetch: (href: string) => void, href: string) {
   }
 }
 
+// pendingHref survives slow getServerSideProps navigations because SidebarNav remounts
+// only after asPath changes. aria-current stays on the loaded route.
 export const SidebarProduct = () => {
   const router = useRouter()
   const {
     currentProduct,
-    // For the sidebar we only need the short titles so we can use the
-    // more "compressed" tree that is as light as possible.
+    // The sidebar only needs short titles, so MainContext supplies the compressed tree.
     sidebarTree,
     sidebarExpanded,
   } = useMainContext()
@@ -124,20 +128,14 @@ export const SidebarProduct = () => {
   const { asPath, locale, query } = router
   const routePath = `/${locale}${asPath.split('?')[0].split('#')[0]}`
 
-  // Optimistic selection: the href of an in-flight click. Used to move the accent bar
-  // visually (data-pending) the instant a link is clicked, even while the destination
-  // page is still loading. This SidebarProduct instance persists during the pending
-  // fetch (SidebarNav keys it on asPath, which only changes once navigation completes),
-  // so the state survives the wait and is discarded by the keyed remount when the new
-  // route lands. aria-current is NOT derived from this — it stays on the loaded route.
+  // pendingHref moves only the visual accent while aria-current stays on the loaded route.
   const [pendingHref, setPendingHref] = useState<string | null>(null)
 
   const prefetchHref = usePrefetchOnInteraction()
-  // Stable callbacks so memoized items don't re-render on unrelated changes.
+  // Stable callbacks keep memoized items from re-rendering on unrelated changes.
   const navigate = useCallback(
     (event: MouseEvent<HTMLElement>, href: string) => {
-      // Only move the optimistic highlight on a real client-side nav, not on a
-      // modifier/middle click that opens a new tab (the current page stays put).
+      // Move the optimistic highlight only for client-side navigation, not modified clicks.
       if (handleNavClick(router, event, href)) setPendingHref(href)
     },
     [router],
@@ -148,12 +146,10 @@ export const SidebarProduct = () => {
     [routePath, pendingHref, navigate, prefetch],
   )
   const restNavValue = useMemo<RestNavValue>(() => ({ asPath, query }), [asPath, query])
+  const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Clear the optimistic highlight if a navigation genuinely fails, so it doesn't
-    // stick on a page that never loaded. Skip cancellations (err.cancelled) — those
-    // fire when a second click supersedes the first, and pendingHref already points at
-    // that newer target, which we want to keep highlighted.
+    // Failed navigations clear pendingHref; cancellations keep the newer click highlighted.
     const clearPending = (err: { cancelled?: boolean }) => {
       if (!err?.cancelled) setPendingHref(null)
     }
@@ -162,16 +158,22 @@ export const SidebarProduct = () => {
   }, [router.events])
 
   useEffect(() => {
-    // Brand NavList auto-expands the whole ancestor chain of the active item, so
-    // scroll to the item marked aria-current="page" (the active article) rather
-    // than the top-most expanded section.
-    const activeArticle = document.querySelector('[aria-current="page"]')
-    // Setting to the top doesn't give enough context of surrounding categories
-    activeArticle?.scrollIntoView({ block: 'center' })
-    // scrollIntoView affects some articles that are very low in the sidebar
-    // The content scrolls down a bit. This sets the article content back up
-    // top unless the route contains a link heading.
-    if (!router.asPath.includes('#')) window?.scrollTo(0, 0)
+    // Article filter query params are shallow same-page updates; the grid manages their scroll.
+    if (/[?&]articles-(filter|category|page)=/.test(router.asPath)) return
+    // Brand expands every active ancestor, so scroll to the aria-current page item.
+    const activeArticle = rootRef.current?.querySelector('[aria-current="page"]')
+    if (!activeArticle) return
+
+    // Scroll by hand to preserve hash anchors; BreadcrumbsScroller does the same.
+    const container = findScrollableAncestor(activeArticle)
+    if (!container) return
+
+    const containerRect = container.getBoundingClientRect()
+    const activeRect = activeArticle.getBoundingClientRect()
+    // Centering shows surrounding categories.
+    const delta =
+      activeRect.top - containerRect.top - (container.clientHeight - activeRect.height) / 2
+    container.scrollBy({ top: delta, behavior: 'instant' })
   }, [])
 
   if (!sidebarTree) {
@@ -221,7 +223,7 @@ export const SidebarProduct = () => {
   }
 
   return (
-    <div data-testid="sidebar" className={styles.sidebar}>
+    <div data-testid="sidebar" className={styles.sidebar} ref={rootRef}>
       <SidebarNavContext.Provider value={navValue}>
         <SidebarExpandStateProvider initial={sidebarExpanded}>
           {isRestPage ? restSection() : productSection()}
@@ -231,9 +233,8 @@ export const SidebarProduct = () => {
   )
 }
 
-// Wraps a brand NavList expandable item (renders as a <button> toggle) with
-// controlled, cookie-persisted expand state. Encapsulating the hook here
-// keeps it out of the conditional leaf/branch logic in the callers.
+// Wrap the Brand NavList button toggle with controlled, cookie-persisted expand
+// state so callers keep hooks out of conditional leaf and branch logic.
 function ExpandableItem({
   title,
   nodeKey,
@@ -256,25 +257,17 @@ function ExpandableItem({
   )
 }
 
-// Brand NavList picks its starting nesting level by *statically* introspecting its
-// direct children for a NavList.SubNav (see the `m = d ? 1 : 2` check in the brand
-// esm source). Our items are custom wrapper components, so brand can't see their
-// SubNavs, treats the list as flat, and starts numbering at level 2 — wasting one of
-// its 5 available levels. Docs content nests 5 levels deep, so that lost level pushes
-// the deepest articles over brand's cap and the depth guard flattens them (#6757).
-// Brand exposes no `startLevel` prop, so this hidden sentinel gives brand a real
-// top-level SubNav to detect, making it number from level 1 and freeing the level the
-// deep content needs.
+// Brand NavList statically inspects direct children for NavList.SubNav in its ESM source.
+// Custom wrapper components hide their SubNavs, so Brand treats the list as flat and
+// starts at level 2. Docs content nests 5 levels deep, and the lost level pushes
+// deepest articles over Brand's cap. This hidden
+// sentinel gives Brand a real top-level SubNav to detect, so it numbers from level 1.
 //
-// The detector accepts a NavList.SubNav nested in ANY direct child's props.children,
-// not only a NavList.Item — so we use a plain <li> we fully control rather than a
-// NavList.Item. Brand's NavList.Item forwards style/aria-hidden to its inner <button>,
-// NOT the outer <li>, so a NavList.Item sentinel would leave a visible, focusable 40px
-// container (and trip the sibling-separator styles) at the top of every sidebar. A
-// hidden native <li> keeps the whole sentinel — container included — out of layout and
-// the a11y tree. It MUST be spread inline (returned by this factory), not rendered as a
-// <Component/>: brand's detector never renders function components, so a wrapper would
-// stay invisible to it.
+// The detector accepts NavList.SubNav in any direct child's props.children, not only
+// NavList.Item. Use a controlled native li because NavList.Item forwards style and
+// aria-hidden to its inner button, which leaves a visible, focusable 40px outer li
+// and trips sibling separators. Return this inline because Brand's detector never
+// renders function components.
 function navListLevelSentinel() {
   return (
     <li aria-hidden="true" style={{ display: 'none' }}>
@@ -315,18 +308,15 @@ const NavListItem = memo(function NavListItem({
   const hasChildren = childPage.childPages.length > 0
   const specialCategory = childPage.layout === 'category-landing'
   const canNest = level < MAX_NAVLIST_LEVEL
-  // sidebarLink.href lacks the locale prefix; normalize once so the rendered
-  // href, aria-current check, and click navigation all agree.
+  // sidebarLink.href lacks a locale prefix; add it so href, aria-current, and navigation agree.
   const sidebarLinkHref = childPage.sidebarLink ? `/${locale}${childPage.sidebarLink.href}` : ''
 
-  // Leaf: a real anchor with client-side navigation. Brand draws the active
-  // accent bar off aria-current="page".
+  // Leaf nodes use anchors so Brand draws the active bar from aria-current page.
   if (!hasChildren) {
     return <LeafLink node={childPage} />
   }
 
-  // At the nesting cap: render this node and its whole subtree as flat leaf links
-  // so nothing becomes unreachable (brand would otherwise drop a level-5 SubNav).
+  // At Brand's nesting cap, flatten descendants so level-5 SubNav content stays reachable.
   if (!canNest) {
     return (
       <>
@@ -338,9 +328,7 @@ const NavListItem = memo(function NavListItem({
     )
   }
 
-  // Expandable: brand renders this as a <button> accordion toggle (href/as are
-  // not allowed here). The category's own landing page is only surfaced when the
-  // content explicitly opts in via `sidebarLink` or a category-landing layout.
+  // Expandable categories use button toggles; sidebarLink or category-landing adds a landing page.
   return (
     <ExpandableItem
       title={childPage.title}
@@ -382,12 +370,14 @@ function RestNavListItem({ category }: { category: ProductTreeNode }) {
   const { routePath, navigate, prefetch } = nav
   const { asPath, query } = useRestNav()
   const [visibleAnchor, setVisibleAnchor] = useState('')
+  // Read automated-page context unconditionally so hook order stays stable across routes.
+  const automatedPage = useAutomatedPageContextOptional()
   const miniTocItems =
     query.productId === 'rest' ||
-    // These pages need the Article Page mini tocs instead of the Rest Pages
+    // Conceptual REST pages skip the REST in-page mini table of contents.
     nonAutomatedRestPaths.some((item: string) => asPath.includes(item))
       ? []
-      : useAutomatedPageContext().miniTocItems
+      : (automatedPage?.miniTocItems ?? [])
 
   useEffect(() => {
     if (nonAutomatedRestPaths.every((item: string) => !asPath.includes(item))) {
@@ -418,7 +408,6 @@ function RestNavListItem({ category }: { category: ProductTreeNode }) {
     }
   }, [miniTocItems])
 
-  // A reference category with no children is a plain link.
   if (category.childPages.length === 0) {
     return (
       <NavList.Item
@@ -443,8 +432,7 @@ function RestNavListItem({ category }: { category: ProductTreeNode }) {
       {category.childPages.map((childPage) => {
         const showMiniToc = routePath === childPage.href && miniTocItems.length > 0
 
-        // Active reference article: render as a toggle whose sub-nav is the
-        // in-page table of contents (you're already on the page).
+        // Active reference articles render as toggles whose sub-nav is the in-page TOC.
         if (showMiniToc) {
           return (
             <NavList.Item key={childPage.href} defaultExpanded>
