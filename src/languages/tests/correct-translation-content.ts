@@ -428,7 +428,7 @@ describe('correctTranslatedContentStrings', () => {
     })
 
     test('fixes en-dash in trim modifier', () => {
-      // {%– uses an en dash (U+2013) instead of a hyphen.
+      // U+2013 appears where the Liquid trim hyphen belongs.
       expect(fix('{%– ifversion projects-v1 %}', 'pt')).toBe('{%- ifversion projects-v1 %}')
       expect(fix('{%– endif %}', 'pt')).toBe('{%- endif %}')
     })
@@ -2308,7 +2308,7 @@ intro: |
       fix(content, 'es', english)
       const elapsed = performance.now() - start
 
-      // Generous threshold for CI; an O(n²) regression would be multi-second.
+      // Generous threshold for CI; a quadratic regression would take multiple seconds.
       expect(elapsed).toBeLessThan(500)
     })
 
@@ -2337,7 +2337,7 @@ Para más información, consulta "[AUTOTITLE](/path)".
       }
       const elapsed = performance.now() - start
 
-      // Generous threshold for CI; an O(n²) regression would be multi-second.
+      // Generous threshold for CI; a quadratic regression would take multiple seconds.
       expect(elapsed).toBeLessThan(2000)
     })
 
@@ -2351,7 +2351,7 @@ Para más información, consulta "[AUTOTITLE](/path)".
       const elapsed = performance.now() - start
 
       expect(result).toContain('{% endraw %}')
-      // Generous threshold for CI; catastrophic backtracking would be multi-second.
+      // Generous threshold for CI; catastrophic backtracking would take multiple seconds.
       expect(elapsed).toBeLessThan(2000)
     })
 
@@ -2362,7 +2362,7 @@ Para más información, consulta "[AUTOTITLE](/path)".
       fix(content, 'ru')
       const elapsed = performance.now() - start
 
-      // Generous threshold; regression would be multi-second.
+      // Generous threshold; regression would take multiple seconds.
       expect(elapsed).toBeLessThan(2000)
     })
   })
@@ -3377,6 +3377,32 @@ Para más información, consulta "[AUTOTITLE](/path)".
       expect(
         correctTranslatedContentStrings(broken, '', { ...context, relativePath: 'other.md' }),
       ).toBe(broken)
+    })
+  })
+
+  describe('octicon with French guillemets', () => {
+    test('fr: trims padding left by « check » after quote normalization', () => {
+      expect(fix('{% octicon « check » aria-label="Included » %}', 'fr')).toBe(
+        '{% octicon "check" aria-label="Included" %}',
+      )
+      expect(fix('{% octicon « x » aria-label="Non inclus" %}', 'fr')).toBe(
+        '{% octicon "x" aria-label="Non inclus" %}',
+      )
+    })
+
+    test('fr: leaves a correct octicon unchanged', () => {
+      const ok = '{% octicon "check" aria-label="Included" %}'
+      expect(fix(ok, 'fr')).toBe(ok)
+    })
+
+    test('leaves padded values on other attributes unchanged', () => {
+      const custom = '{% octicon "x" data-aria-label=" a " myclass=" b " title=" c " %}'
+      expect(fix(custom, 'fr')).toBe(custom)
+    })
+
+    test('leaves whitespace-only attribute values unchanged', () => {
+      const blank = '{% octicon "x" class=" " width="64" aria-label="Supported" %}'
+      expect(fix(blank, 'fr')).toBe(blank)
     })
   })
 })
